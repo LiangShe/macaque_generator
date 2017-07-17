@@ -1,3 +1,3 @@
 # macaque_generator
-Macaque generator
+Macaque generator: 
 For models to generate images of macaque
