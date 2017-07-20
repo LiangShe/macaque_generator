@@ -22,6 +22,7 @@ class vae_config:
     kernel_size = 3
     latent_dim = 2
     intermediate_dim = 128
+    feature_size = 14
     epsilon_std = 1.0
     
 
@@ -44,12 +45,12 @@ def encoder_layers(x, c):
 def decoder_layers(x, c):
     
     if K.image_data_format() == 'channels_first':
-        output_shape = (c.batch_size, c.filter_num, 14, 14)
+        output_shape = (c.batch_size, c.filter_num, c.feature_size, c.feature_size)
     else:
-        output_shape = (c.batch_size, 14, 14, c.filter_num)
+        output_shape = (c.batch_size, c.feature_size, c.feature_size, c.filter_num)
         
     x = Dense(c.intermediate_dim, activation = 'relu', name='decoder_dense_1')(x)
-    x = Dense(c.filter_num * 14 * 14, activation = 'relu', name='decoder_dense_2')(x)
+    x = Dense(c.filter_num * c.feature_size * c.feature_size, activation = 'relu', name='decoder_dense_2')(x)
 
     x = Reshape(output_shape[1:], name='decoder_reshape')(x)
     x = Conv2DTranspose(c.filter_num, c.kernel_size, padding='same', activation='relu', name='deconv_1')(x)
@@ -60,7 +61,7 @@ def decoder_layers(x, c):
     return img_decoded
 
 
-def vae_model( config = vae_config() ):
+def vae_model( config = vae_config(), training = False ):
     '''return vae, encoder, decoder '''
     #
     img_size = config.img_size
