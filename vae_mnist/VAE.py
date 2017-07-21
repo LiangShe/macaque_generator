@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 
-'''This script demonstrates how to build a variational autoencoder
-with Keras and deconvolution layers.
-
-Reference: "Auto-Encoding Variational Bayes" https://arxiv.org/abs/1312.6114
-'''
-
-
 from keras.layers import Input, Dense, Lambda, Flatten, Reshape
 from keras.layers import Conv2D, Conv2DTranspose
 from keras.models import Model
 from keras import backend as K
 from keras import metrics
 
-class vae_config:
-    
+import os
+import pickle
+
+class VAE_config:
+    ''' variational autoencoder config'''
     img_size = (28, 28)
     img_chns = 1
     batch_size = 100
@@ -24,8 +20,58 @@ class vae_config:
     intermediate_dim = 128
     feature_size = 14
     epsilon_std = 1.0
+    training = False
+    optimizer = 'rmsprop'
     
+    def save(self, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump(self, f)
+    
+    @staticmethod
+    def load(filename):
+        with open(filename, 'rb') as f:
+            config = pickle.load(f)
+        return config
+    
+class VAE_net:
+    ''' variational autoencoder class'''
+    
+    def __init__(self, config = VAE_config()):
+        self.config = config
+        self.vae, self.encoder, self.decoder = vae_model(config)
+        if config.training:
+            self.vae.compile(optimizer=config.optimizer, loss=None)
 
+    
+    
+    def save(self, folder_name):
+        '''save vae model to folder'''
+        
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+        
+        weights_file, config_file = _get_model_files(folder_name)
+        
+        self.vae.save_weights(weights_file)
+        self.config.save(config_file)
+    
+    @staticmethod
+    def load(folder_name):
+        '''load vae model from folder'''
+        weights_file, config_file = _get_model_files(folder_name)
+        config = VAE_config.load(config_file)
+        config.training = False
+        net = VAE_net(config)
+        net.vae.load_weights(weights_file)
+        return net
+        
+        
+def _get_model_files(name):
+    weights_file = os.path.join(name,'weights.h5')
+    config_file = os.path.join(name,'config.pickle')
+    return weights_file, config_file
+            
+    
 def encoder_layers(x, c):
     
     
@@ -61,7 +107,7 @@ def decoder_layers(x, c):
     return img_decoded
 
 
-def vae_model( config = vae_config(), training = False ):
+def vae_model( config ):
     '''return vae, encoder, decoder '''
     #
     img_size = config.img_size
